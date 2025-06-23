@@ -1,0 +1,76 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleSlackAuth = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Generate a random state parameter for security
+      const state = Math.random().toString(36).substring(2, 15);
+
+      // Store state in sessionStorage for verification
+      sessionStorage.setItem("slack_oauth_state", state);
+
+      // Construct the Slack OAuth URL
+      const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+      const redirectUri =
+        process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI ||
+        `${window.location.origin}/api/auth/callback`;
+      const scope = "identity.basic,identity.email,identity.avatar";
+
+      const authUrl = `https://slack.com/oauth/authorize?client_id=${clientId}&scope=${scope}&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}&state=${state}`;
+
+      // Redirect to Slack OAuth
+      window.location.href = authUrl;
+    } catch (err) {
+      setError("Failed to initiate Slack authentication");
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="container">
+      <div className="card">
+        <h1 className="title">Welcome</h1>
+        <p className="subtitle">Sign in with your Slack account to continue</p>
+
+        <button
+          className={`slack-button ${isLoading ? "loading" : ""}`}
+          onClick={handleSlackAuth}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <div className="spinner"></div>
+              Authenticating...
+            </>
+          ) : (
+            <>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M6 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm6-8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm6 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+              </svg>
+              Auth with Slack
+            </>
+          )}
+        </button>
+
+        {error && <p className="error-message">{error}</p>}
+      </div>
+    </div>
+  );
+}
