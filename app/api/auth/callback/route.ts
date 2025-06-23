@@ -42,16 +42,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Prepare the token exchange request
+    const tokenRequestData = {
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: code,
+      redirect_uri: redirectUri,
+    };
+
+    console.log("Token exchange request data:", {
+      client_id: clientId,
+      client_secret: clientSecret ? "***" : "MISSING",
+      code: code,
+      redirect_uri: redirectUri,
+    });
+
     // Exchange the authorization code for an access token
     console.log("Exchanging code for token...");
     const tokenResponse = await axios.post(
       "https://slack.com/api/oauth.access",
-      {
-        client_id: clientId,
-        client_secret: clientSecret,
-        code: code,
-        redirect_uri: redirectUri,
-      }
+      tokenRequestData
     );
 
     console.log("Token response status:", tokenResponse.status);
