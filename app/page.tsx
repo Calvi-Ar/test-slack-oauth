@@ -60,28 +60,29 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Generate a random state parameter for security
+      // Generate a random state and nonce parameter for security
       const state = Math.random().toString(36).substring(2, 15);
+      const nonce = Math.random().toString(36).substring(2, 15);
 
-      // Store state in sessionStorage for verification
+      // Store state and nonce in sessionStorage for verification
       sessionStorage.setItem("slack_oauth_state", state);
+      sessionStorage.setItem("slack_oauth_nonce", nonce);
 
-      // Construct the Slack OAuth v2 URL for Sign in with Slack (user identity)
+      // Construct the Slack OpenID Connect authorize URL
       const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
       const redirectUri =
         process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI ||
         `${window.location.origin}/api/auth/callback`;
-
-      // Only use user_scope for identity
-      const userScopes =
-        "identity.basic,identity.email,identity.avatar,identity.team,openid,profile";
+      const scopes = "openid profile email";
       const authUrl =
-        `https://slack.com/oauth/v2/authorize?client_id=${clientId}` +
-        `&user_scope=${encodeURIComponent(userScopes)}` +
+        `https://slack.com/openid/connect/authorize?client_id=${clientId}` +
+        `&scope=${encodeURIComponent(scopes)}` +
+        `&response_type=code` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&state=${state}`;
+        `&state=${state}` +
+        `&nonce=${nonce}`;
 
-      // Redirect to Slack OAuth
+      // Redirect to Slack OpenID Connect
       window.location.href = authUrl;
     } catch (err) {
       setError("Failed to initiate Slack authentication");
