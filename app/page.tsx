@@ -47,6 +47,14 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
+  // Log error to browser console for debugging
+  useEffect(() => {
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error("[Slack OAuth Error]", error);
+    }
+  }, [error]);
+
   const handleSlackAuth = async () => {
     setIsLoading(true);
     setError("");
@@ -81,6 +89,11 @@ export default function LoginPage() {
       window.location.href = authUrl;
     } catch (err) {
       setError("Failed to initiate Slack authentication");
+      // eslint-disable-next-line no-console
+      console.error(
+        "[Slack OAuth Error] Failed to initiate Slack authentication",
+        err
+      );
       setIsLoading(false);
     }
   };
