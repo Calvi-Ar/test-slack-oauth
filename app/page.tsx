@@ -1,12 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check for error parameters in URL
+    const errorParam = searchParams.get("error");
+    const detailsParam = searchParams.get("details");
+
+    if (errorParam) {
+      let errorMessage = "Authentication failed";
+
+      switch (errorParam) {
+        case "oauth_failed":
+          errorMessage = `OAuth failed${
+            detailsParam ? `: ${detailsParam}` : ""
+          }`;
+          break;
+        case "user_info_failed":
+          errorMessage = `Failed to get user info${
+            detailsParam ? `: ${detailsParam}` : ""
+          }`;
+          break;
+        case "config_error":
+          errorMessage = "Configuration error - check environment variables";
+          break;
+        case "missing_code":
+          errorMessage = "Missing authorization code";
+          break;
+        case "server_error":
+          errorMessage = "Server error occurred";
+          break;
+        default:
+          errorMessage = `Error: ${errorParam}${
+            detailsParam ? ` - ${detailsParam}` : ""
+          }`;
+      }
+
+      setError(errorMessage);
+    }
+  }, [searchParams]);
 
   const handleSlackAuth = async () => {
     setIsLoading(true);
