@@ -57,10 +57,10 @@ export async function GET(request: NextRequest) {
       redirect_uri: redirectUri,
     });
 
-    // Exchange the authorization code for an access token
-    console.log("Exchanging code for token...");
+    // Exchange the authorization code for an access token (V2 endpoint)
+    console.log("Exchanging code for token (V2 endpoint)...");
     const tokenResponse = await axios.post(
-      "https://slack.com/api/oauth.access",
+      "https://slack.com/api/oauth.v2.access",
       tokenRequestData
     );
 
@@ -77,46 +77,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { access_token, user } = tokenResponse.data;
-    console.log("Token exchange successful, getting user info...");
+    // Extract user info from V2 response
+    const { access_token, authed_user } = tokenResponse.data;
+    let userInfo = null;
 
-    // Get user info using the access token
-    const userResponse = await axios.get(
-      "https://slack.com/api/users.identity",
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+    // If identity scopes are present, fetch user info
+    if (authed_user && authed_user.id) {
+      try {
+        const userResponse = await axios.get(
+          "https://slack.com/api/users.info",
+          {
+            params: { user: authed_user.id },
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+            },
+          }
+        );
+        if (userResponse.data.ok) {
+          userInfo = userResponse.data.user;
+        } else {
+          console.error("Failed to get user info:", userResponse.data.error);
+        }
+      } catch (userErr) {
+        console.error("Error fetching user info:", userErr);
       }
-    );
+    }
 
-    console.log("User response status:", userResponse.status);
-    console.log("User response data:", userResponse.data);
+    // Fallback if userInfo is not available
+    if (!userInfo && authed_user) {
+      userInfo = {
+        id: authed_user.id,
+        name: authed_user.name || "",
+        email: authed_user.email || "",
+        avatar: authed_user.image_192 || authed_user.image_512 || "",
+      };
+    }
 
-    if (!userResponse.data.ok) {
-      console.error("Failed to get user info:", userResponse.data.error);
+    if (!userInfo) {
       return NextResponse.redirect(
         new URL(
-          `/?error=user_info_failed&details=${userResponse.data.error}`,
+          "/?error=user_info_failed&details=Could not retrieve user info",
           request.url
         )
       );
     }
-
-    const userInfo = userResponse.data.user;
-    console.log("User info retrieved successfully:", {
-      id: userInfo.id,
-      name: userInfo.name,
-    });
 
     // Create a session (in a real app, you'd use a proper session management system)
     const sessionData = {
       access_token,
       user: {
         id: userInfo.id,
-        name: userInfo.name,
-        email: userInfo.email,
-        avatar: userInfo.image_192 || userInfo.image_512,
+        name: userInfo.real_name || userInfo.name || "",
+        email: userInfo.profile?.email || userInfo.email || "",
+        avatar: userInfo.profile?.image_192 || userInfo.avatar || "",
       },
     };
 
