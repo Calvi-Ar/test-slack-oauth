@@ -77,30 +77,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract user info from V2 response
+    // Use the correct access token for user info
     const { access_token, authed_user } = tokenResponse.data;
+    let userAccessToken = access_token;
+    if (authed_user && authed_user.access_token) {
+      userAccessToken = authed_user.access_token;
+    }
     let userInfo = null;
 
-    // If identity scopes are present, fetch user info
-    if (authed_user && authed_user.id) {
-      try {
-        const userResponse = await axios.get(
-          "https://slack.com/api/users.info",
-          {
-            params: { user: authed_user.id },
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-            },
-          }
-        );
-        if (userResponse.data.ok) {
-          userInfo = userResponse.data.user;
-        } else {
-          console.error("Failed to get user info:", userResponse.data.error);
+    // If identity scopes are present, fetch user info using the user access token
+    try {
+      const userResponse = await axios.get(
+        "https://slack.com/api/users.identity",
+        {
+          headers: {
+            Authorization: `Bearer ${userAccessToken}`,
+          },
         }
-      } catch (userErr) {
-        console.error("Error fetching user info:", userErr);
+      );
+      if (userResponse.data.ok) {
+        userInfo = userResponse.data.user;
+      } else {
+        console.error("Failed to get user info:", userResponse.data.error);
       }
+    } catch (userErr) {
+      console.error("Error fetching user info:", userErr);
     }
 
     // Fallback if userInfo is not available
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
 
     // Create a session (in a real app, you'd use a proper session management system)
     const sessionData = {
-      access_token,
+      access_token: userAccessToken,
       user: {
         id: userInfo.id,
         name: userInfo.real_name || userInfo.name || "",

@@ -58,16 +58,24 @@ export default function LoginPage() {
       // Store state in sessionStorage for verification
       sessionStorage.setItem("slack_oauth_state", state);
 
-      // Construct the Slack OAuth URL
+      // Construct the Slack OAuth v2 URL
       const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
       const redirectUri =
         process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI ||
         `${window.location.origin}/api/auth/callback`;
-      const scope = "identity.basic,identity.email,identity.avatar";
 
-      const authUrl = `https://slack.com/oauth/authorize?client_id=${clientId}&scope=${scope}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&state=${state}`;
+      // Use bot scopes for bot token, user_scope for identity scopes
+      const botScopes = "channels:read,chat:write,users:read";
+      const userScopes =
+        "identity.basic,identity.email,identity.avatar,identity.team,openid,profile";
+
+      // If you want to use only user scopes, you can remove botScopes and use only userScopes
+      const authUrl =
+        `https://slack.com/oauth/v2/authorize?client_id=${clientId}` +
+        `&scope=${encodeURIComponent(botScopes)}` +
+        `&user_scope=${encodeURIComponent(userScopes)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&state=${state}`;
 
       // Redirect to Slack OAuth
       window.location.href = authUrl;
